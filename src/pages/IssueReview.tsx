@@ -10,6 +10,7 @@ export function IssueReview() {
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [mergeTarget, setMergeTarget] = useState('');
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'other'>('pending');
 
   const handleOpenDetail = (issue: Issue) => {
     setSelectedIssue(issue);
@@ -123,7 +124,7 @@ export function IssueReview() {
           <h2 className="text-xl font-bold text-gray-800">问题复核</h2>
           <p className="text-gray-500 mt-1">审核巡检发现的问题，确认问题真实性并处理重复问题</p>
         </div>
-        {selectedIssues.length >= 2 && (
+        {selectedIssues.length >= 2 && activeTab === 'pending' && (
           <button
             onClick={handleOpenMerge}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -137,86 +138,113 @@ export function IssueReview() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="border-b border-gray-100">
           <div className="flex">
-            <button className="px-6 py-3 font-medium text-primary-600 border-b-2 border-primary-600 bg-primary-50">
+            <button
+              onClick={() => {
+                setActiveTab('pending');
+                setSelectedIssues([]);
+              }}
+              className={`px-6 py-3 font-medium transition-colors ${
+                activeTab === 'pending'
+                  ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               待复核 ({pendingIssues.length})
             </button>
-            <button className="px-6 py-3 font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+            <button
+              onClick={() => {
+                setActiveTab('confirmed');
+                setSelectedIssues([]);
+              }}
+              className={`px-6 py-3 font-medium transition-colors ${
+                activeTab === 'confirmed'
+                  ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               已确认 ({confirmedIssues.length})
             </button>
-            <button className="px-6 py-3 font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+            <button
+              onClick={() => {
+                setActiveTab('other');
+                setSelectedIssues([]);
+              }}
+              className={`px-6 py-3 font-medium transition-colors ${
+                activeTab === 'other'
+                  ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               其他 ({otherIssues.length})
             </button>
           </div>
         </div>
 
         <div className="divide-y divide-gray-100">
-          {pendingIssues.map(issue => (
-            <div key={issue.id} className="p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start gap-4">
-                <input
-                  type="checkbox"
-                  checked={selectedIssues.includes(issue.id)}
-                  onChange={() => setSelectedIssues(prev =>
-                    prev.includes(issue.id) ? prev.filter(id => id !== issue.id) : [...prev, issue.id]
-                  )}
-                  className="mt-1 w-4 h-4 text-primary-600 rounded"
-                />
-
-                <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
-                  issue.severity === 'critical' ? 'bg-red-500' :
-                  issue.severity === 'high' ? 'bg-orange-500' :
-                  issue.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                }`}></div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-gray-800">{issue.description}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityColor(issue.severity)}`}>
-                      {getSeverityLabel(issue.severity)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Camera className="w-4 h-4" />
-                      {getPointName(issue.camera_point_id)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {issue.created_at}
-                    </span>
-                    <span>类型: {getTypeLabel(issue.type)}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleOpenDetail(issue)}
-                    className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleConfirm(issue.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    确认
-                  </button>
-                  <button
-                    onClick={() => handleMarkInvalid(issue.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    无效
-                  </button>
-                </div>
-              </div>
-            </div>
+          {activeTab === 'pending' && pendingIssues.map(issue => (
+            <IssueRow
+              key={issue.id}
+              issue={issue}
+              selectedIssues={selectedIssues}
+              setSelectedIssues={setSelectedIssues}
+              handleOpenDetail={handleOpenDetail}
+              handleConfirm={handleConfirm}
+              handleMarkInvalid={handleMarkInvalid}
+              getPointName={getPointName}
+              getTypeLabel={getTypeLabel}
+              getSeverityColor={getSeverityColor}
+              getSeverityLabel={getSeverityLabel}
+              showActions={true}
+            />
           ))}
-          {pendingIssues.length === 0 && (
+          {activeTab === 'confirmed' && confirmedIssues.map(issue => (
+            <IssueRow
+              key={issue.id}
+              issue={issue}
+              selectedIssues={selectedIssues}
+              setSelectedIssues={setSelectedIssues}
+              handleOpenDetail={handleOpenDetail}
+              handleConfirm={handleConfirm}
+              handleMarkInvalid={handleMarkInvalid}
+              getPointName={getPointName}
+              getTypeLabel={getTypeLabel}
+              getSeverityColor={getSeverityColor}
+              getSeverityLabel={getSeverityLabel}
+              showActions={false}
+            />
+          ))}
+          {activeTab === 'other' && otherIssues.map(issue => (
+            <IssueRow
+              key={issue.id}
+              issue={issue}
+              selectedIssues={selectedIssues}
+              setSelectedIssues={setSelectedIssues}
+              handleOpenDetail={handleOpenDetail}
+              handleConfirm={handleConfirm}
+              handleMarkInvalid={handleMarkInvalid}
+              getPointName={getPointName}
+              getTypeLabel={getTypeLabel}
+              getSeverityColor={getSeverityColor}
+              getSeverityLabel={getSeverityLabel}
+              showActions={false}
+            />
+          ))}
+          {activeTab === 'pending' && pendingIssues.length === 0 && (
             <div className="p-12 text-center text-gray-400">
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
               <p>暂无待复核的问题</p>
+            </div>
+          )}
+          {activeTab === 'confirmed' && confirmedIssues.length === 0 && (
+            <div className="p-12 text-center text-gray-400">
+              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p>暂无已确认的问题</p>
+            </div>
+          )}
+          {activeTab === 'other' && otherIssues.length === 0 && (
+            <div className="p-12 text-center text-gray-400">
+              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p>暂无其他问题</p>
             </div>
           )}
         </div>
@@ -383,3 +411,100 @@ export function IssueReview() {
     </div>
   );
 }
+
+interface IssueRowProps {
+  issue: Issue;
+  selectedIssues: string[];
+  setSelectedIssues: React.Dispatch<React.SetStateAction<string[]>>;
+  handleOpenDetail: (issue: Issue) => void;
+  handleConfirm: (issueId: string) => void;
+  handleMarkInvalid: (issueId: string) => void;
+  getPointName: (pointId: string) => string;
+  getTypeLabel: (type: string) => string;
+  getSeverityColor: (severity: string) => string;
+  getSeverityLabel: (severity: string) => string;
+  showActions: boolean;
+}
+
+function IssueRow({
+  issue,
+  selectedIssues,
+  setSelectedIssues,
+  handleOpenDetail,
+  handleConfirm,
+  handleMarkInvalid,
+  getPointName,
+  getTypeLabel,
+  getSeverityColor,
+  getSeverityLabel,
+  showActions
+}: IssueRowProps) {
+  return (
+    <div className="p-4 hover:bg-gray-50 transition-colors">
+      <div className="flex items-start gap-4">
+        {showActions && (
+          <input
+            type="checkbox"
+            checked={selectedIssues.includes(issue.id)}
+            onChange={() => setSelectedIssues(prev =>
+              prev.includes(issue.id) ? prev.filter(id => id !== issue.id) : [...prev, issue.id]
+            )}
+            className="mt-1 w-4 h-4 text-primary-600 rounded"
+          />
+        )}
+
+        <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+          issue.severity === 'critical' ? 'bg-red-500' :
+          issue.severity === 'high' ? 'bg-orange-500' :
+          issue.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+        }`}></div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-gray-800">{issue.description}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityColor(issue.severity)}`}>
+              {getSeverityLabel(issue.severity)}
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <span className="flex items-center gap-1">
+              <Camera className="w-4 h-4" />
+              {getPointName(issue.camera_point_id)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {issue.created_at}
+            </span>
+            <span>类型: {getTypeLabel(issue.type)}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleOpenDetail(issue)}
+            className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          {showActions && (
+            <>
+              <button
+                onClick={() => handleConfirm(issue.id)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm"
+              >
+                <CheckCircle className="w-4 h-4" />
+                确认
+              </button>
+              <button
+                onClick={() => handleMarkInvalid(issue.id)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+              >
+                <XCircle className="w-4 h-4" />
+                无效
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );

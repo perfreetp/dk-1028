@@ -14,17 +14,17 @@ import './index.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/plans" element={<InspectionPlans />} />
-          <Route path="/points" element={<CameraPoints />} />
-          <Route path="/tasks" element={<SamplingTasks />} />
-          <Route path="/review" element={<IssueReview />} />
-          <Route path="/workorders" element={<WorkOrders />} />
-          <Route path="/reports" element={<Reports />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="plans" element={<InspectionPlans />} />
+          <Route path="points" element={<CameraPoints />} />
+          <Route path="tasks" element={<SamplingTasks />} />
+          <Route path="review" element={<IssueReview />} />
+          <Route path="workorders" element={<WorkOrders />} />
+          <Route path="reports" element={<Reports />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   </React.StrictMode>,
 )

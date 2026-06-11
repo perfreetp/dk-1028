@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Play, CheckCircle, Clock, Camera, Eye, Star, Moon, Hash, X, Shuffle, Upload, Flag, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store';
 import type { InspectionTask } from '@/types';
@@ -27,9 +27,30 @@ export function SamplingTasks() {
   });
 
   const [showIssueForm, setShowIssueForm] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setUploadedImages(prev => [...prev, base64]);
+        setScreenshotPreview(base64);
+        setTaskForm({ ...taskForm, screenshot_url: base64 });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleExecute = (task: InspectionTask) => {
     setSelectedTask(task);
+    setUploadedImages(task.screenshot_url ? [task.screenshot_url] : []);
+    setScreenshotPreview(task.screenshot_url || null);
     setTaskForm({
       clarity_score: task.clarity_score || 0,
       night_effect_score: task.night_effect_score || 0,
@@ -256,6 +277,27 @@ export function SamplingTasks() {
                   <span>清晰度: {task.clarity_score}</span>
                   <span>夜视: {task.night_effect_score}</span>
                 </div>
+                {task.screenshot_url && (
+                  <div className="mt-2">
+                    <img
+                      src={task.screenshot_url}
+                      alt="任务截图"
+                      className="w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        setSelectedTask(task);
+                        setScreenshotPreview(task.screenshot_url);
+                        setTaskForm({
+                          clarity_score: task.clarity_score || 0,
+                          night_effect_score: task.night_effect_score || 0,
+                          watermark_check: task.watermark_check,
+                          playback_check: task.playback_check,
+                          screenshot_url: task.screenshot_url || '',
+                        });
+                        setShowExecuteModal(true);
+                      }}
+                    />
+                  </div>
+                )}
                 {task.completed_at && (
                   <div className="text-xs text-gray-400 mt-1">{task.completed_at}</div>
                 )}
@@ -361,11 +403,53 @@ export function SamplingTasks() {
                   <Upload className="w-4 h-4 inline mr-1" />
                   截图留证
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 transition-colors">
-                  <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">点击或拖拽上传截图</p>
-                  <p className="text-sm text-gray-400 mt-1">支持 JPG, PNG 格式</p>
-                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {screenshotPreview ? (
+                  <div className="relative border-2 border-primary-300 rounded-lg p-2 bg-gray-50">
+                    <img
+                      src={screenshotPreview}
+                      alt="截图预览"
+                      className="w-full h-48 object-contain rounded"
+                    />
+                    <button
+                      onClick={() => {
+                        setScreenshotPreview(null);
+                        setUploadedImages([]);
+                        setTaskForm({ ...taskForm, screenshot_url: '' });
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="absolute top-4 right-4 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-600 rounded-lg hover:bg-primary-200 transition-colors text-sm"
+                    >
+                      <Upload className="w-4 h-4" />
+                      重新上传
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 hover:bg-gray-50 transition-all cursor-pointer"
+                  >
+                    <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">点击或拖拽上传截图</p>
+                    <p className="text-sm text-gray-400 mt-1">支持 JPG, PNG 格式</p>
+                  </div>
+                )}
+                {uploadedImages.length > 0 && (
+                  <p className="text-xs text-green-600 mt-2">已上传 {uploadedImages.length} 张截图</p>
+                )}
               </div>
 
               <div className="border-t border-gray-100 pt-4">

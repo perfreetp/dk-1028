@@ -89,9 +89,13 @@ export function InspectionPlans() {
 
   const handleGenerateTasks = () => {
     if (!selectedPlan || selectedPoints.length === 0) return;
-    generateTasks(selectedPlan.id, selectedPoints);
+    const result = generateTasks(selectedPlan.id, selectedPoints);
     setShowGenerateModal(false);
-    setNotification({ id: '1', type: 'success', message: '任务生成成功', timestamp: new Date().toISOString() });
+    if (result && result.success) {
+      setNotification({ id: '1', type: 'success', message: `成功生成 ${result.count} 个任务`, timestamp: new Date().toISOString() });
+    } else if (result && !result.success) {
+      setNotification({ id: '1', type: 'warning', message: result.message, timestamp: new Date().toISOString() });
+    }
   };
 
   const getAreaName = (areaId: string) => {

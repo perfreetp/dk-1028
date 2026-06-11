@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Eye, CheckCircle, XCircle, Clock, AlertCircle, Upload, Users, Calendar, MapPin, X } from 'lucide-react';
 import { useStore } from '@/store';
 import type { WorkOrder } from '@/types';
@@ -23,6 +23,35 @@ export function WorkOrders() {
     rectification_note: '',
     rectification_photos: [] as string[],
   });
+
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
+  const photoFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setCompleteData(prev => ({
+          ...prev,
+          rectification_photos: [...prev.rectification_photos, base64],
+        }));
+        setPhotoPreviewUrls(prev => [...prev, base64]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setCompleteData(prev => ({
+      ...prev,
+      rectification_photos: prev.rectification_photos.filter((_, i) => i !== index),
+    }));
+    setPhotoPreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleOpenCreate = () => {
     setIsEditing(false);
@@ -70,6 +99,7 @@ export function WorkOrders() {
       rectification_note: order.rectification_note,
       rectification_photos: order.rectification_photos,
     });
+    setPhotoPreviewUrls(order.rectification_photos);
     setShowCompleteModal(true);
   };
 
@@ -505,11 +535,48 @@ export function WorkOrders() {
                   <Upload className="w-4 h-4 inline mr-1" />
                   整改照片
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 transition-colors">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">点击或拖拽上传整改照片</p>
-                  <p className="text-sm text-gray-400 mt-1">支持 JPG, PNG 格式</p>
-                </div>
+                <input
+                  ref={photoFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+                {photoPreviewUrls.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {photoPreviewUrls.map((url, index) => (
+                        <div key={index} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          <img src={url} alt={`整改照片 ${index + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => handleRemovePhoto(index)}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => photoFileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-500 hover:text-primary-600 transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      添加更多照片
+                    </button>
+                    <p className="text-xs text-gray-500">已上传 {photoPreviewUrls.length} 张照片</p>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => photoFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 hover:bg-gray-50 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">点击或拖拽上传整改照片</p>
+                    <p className="text-sm text-gray-400 mt-1">支持 JPG, PNG 格式</p>
+                  </div>
+                )}
               </div>
             </div>
 

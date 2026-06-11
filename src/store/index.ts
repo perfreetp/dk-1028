@@ -146,7 +146,7 @@ interface AppState {
   completeWorkOrder: (id: string) => void;
   reviewWorkOrder: (id: string, approved: boolean) => void;
   
-  generateTasks: (planId: string, pointIds: string[]) => void;
+  generateTasks: (planId: string, pointIds: string[]) => { success: boolean; message?: string; count?: number } | undefined;
   randomSample: (areaId: string, count: number) => CameraPoint[];
   
   setSelectedArea: (area: Area | null) => void;
@@ -333,7 +333,17 @@ export const useStore = create<AppState>((set, get) => ({
     const plan = get().inspectionPlans.find(p => p.id === planId);
     if (!plan) return;
     
-    const tasks: Omit<InspectionTask, 'id' | 'created_at'>[] = pointIds.map(pointId => ({
+    const existingTaskPointIds = get().inspectionTasks
+      .filter(t => t.plan_id === planId && ['pending', 'in_progress'].includes(t.status))
+      .map(t => t.camera_point_id);
+    
+    const newPointIds = pointIds.filter(id => !existingTaskPointIds.includes(id));
+    
+    if (newPointIds.length === 0) {
+      return { success: false, message: '所选点位已存在待执行或进行中的任务' };
+    }
+    
+    const tasks: Omit<InspectionTask, 'id' | 'created_at'>[] = newPointIds.map(pointId => ({
       plan_id: planId,
       camera_point_id: pointId,
       assignee_id: '3',
@@ -348,6 +358,7 @@ export const useStore = create<AppState>((set, get) => ({
     }));
     
     tasks.forEach(task => get().addInspectionTask(task));
+    return { success: true, count: tasks.length };
   },
   
   randomSample: (areaId, count) => {
