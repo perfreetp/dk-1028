@@ -77,13 +77,17 @@ export function WorkOrders() {
       setNotification({ id: '1', type: 'success', message: '工单更新成功', timestamp: new Date().toISOString() });
     } else {
       addWorkOrder({
-        ...formData,
-        status: 'pending',
+        issue_id: formData.issue_id,
+        responsible_unit_id: formData.responsible_unit_id,
+        description: formData.description,
+        deadline: formData.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'assigned',
         rectification_photos: [],
         rectification_note: '',
         completed_at: null,
+        assignee_id: null,
       });
-      setNotification({ id: '1', type: 'success', message: '工单创建成功', timestamp: new Date().toISOString() });
+      setNotification({ id: '1', type: 'success', message: '工单已创建并分派', timestamp: new Date().toISOString() });
     }
     setShowForm(false);
   };
@@ -105,13 +109,21 @@ export function WorkOrders() {
 
   const handleComplete = () => {
     if (!selectedOrder) return;
+    
+    const newStatus = selectedOrder.status === 'assigned' ? 'processing' : 'completed';
+    
     updateWorkOrder(selectedOrder.id, {
       ...completeData,
-      status: 'completed',
-      completed_at: new Date().toISOString().split('T')[0],
+      status: newStatus,
+      completed_at: newStatus === 'completed' ? new Date().toISOString().split('T')[0] : null,
     });
     setShowCompleteModal(false);
-    setNotification({ id: '1', type: 'success', message: '工单已完成', timestamp: new Date().toISOString() });
+    setNotification({ 
+      id: '1', 
+      type: 'success', 
+      message: newStatus === 'processing' ? '已开始处理整改' : '整改已提交，等待复核', 
+      timestamp: new Date().toISOString() 
+    });
   };
 
   const handleReview = (orderId: string, approved: boolean) => {
@@ -284,7 +296,7 @@ export function WorkOrders() {
                         <button onClick={() => handleOpenDetail(order)} className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
-                        {order.status === 'assigned' && (
+                        {['assigned', 'processing'].includes(order.status) && (
                           <button onClick={() => handleOpenComplete(order)} className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
                             <CheckCircle className="w-4 h-4" />
                           </button>
@@ -512,7 +524,9 @@ export function WorkOrders() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">完成整改</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                {selectedOrder.status === 'assigned' ? '开始处理整改' : '提交整改'}
+              </h3>
               <button onClick={() => setShowCompleteModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                 <X className="w-5 h-5" />
               </button>
@@ -591,7 +605,7 @@ export function WorkOrders() {
                 onClick={handleComplete}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                提交整改
+                {selectedOrder.status === 'assigned' ? '开始处理' : '提交整改'}
               </button>
             </div>
           </div>

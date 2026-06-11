@@ -308,22 +308,23 @@ export function IssueReview() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-2">问题图片</label>
-                {selectedIssue.images_urls.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4">
+              {selectedIssue.images_urls && selectedIssue.images_urls.length > 0 ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">问题图片</label>
+                  <div className="grid grid-cols-3 gap-3">
                     {selectedIssue.images_urls.map((url, index) => (
-                      <div key={index} className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                        <img src={url} alt={`问题图片 ${index + 1}`} className="max-w-full max-h-full object-contain" />
+                      <div key={index} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                        <img src={url} alt={`问题图片 ${index + 1}`} className="w-full h-full object-cover" />
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                    <p className="text-gray-400">暂无图片</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-400">
+                  <Camera className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-sm">暂无问题图片</p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 p-6 border-t border-gray-100">

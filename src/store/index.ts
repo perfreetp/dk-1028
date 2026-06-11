@@ -12,6 +12,7 @@ import type {
   MonthlyStat,
   PointRanking,
   Notification,
+  InspectionTemplate,
 } from '@/types';
 
 const mockUsers: User[] = [
@@ -19,6 +20,12 @@ const mockUsers: User[] = [
   { id: '2', email: 'supervisor@example.com', name: '安防主管', role: 'supervisor', created_at: '2024-01-01' },
   { id: '3', email: 'inspector@example.com', name: '巡检员张三', role: 'inspector', created_at: '2024-01-01' },
   { id: '4', email: 'reviewer@example.com', name: '复核员李四', role: 'reviewer', created_at: '2024-01-01' },
+];
+
+const mockInspectionTemplates: InspectionTemplate[] = [
+  { id: 'tpl1', name: '标准巡检模板', description: '包含清晰度、夜视、水印、回放等全部检查项', clarity_weight: 50, night_effect_weight: 50, check_watermark: true, check_playback: true, check_clarity: true, check_night_effect: true, watermark_default_score: 100, playback_default_score: 100, clarity_default_score: 90, night_effect_default_score: 80, created_at: '2024-01-01' },
+  { id: 'tpl2', name: '基础巡检模板', description: '仅检查清晰度和水印，适合日间监控点', clarity_weight: 70, night_effect_weight: 0, check_watermark: true, check_playback: false, check_clarity: true, check_night_effect: false, watermark_default_score: 100, playback_default_score: 0, clarity_default_score: 90, night_effect_default_score: 0, created_at: '2024-01-01' },
+  { id: 'tpl3', name: '夜视专项模板', description: '重点检查夜视效果，适用于夜间重点区域', clarity_weight: 30, night_effect_weight: 70, check_watermark: true, check_playback: true, check_clarity: true, check_night_effect: true, watermark_default_score: 100, playback_default_score: 100, clarity_default_score: 80, night_effect_default_score: 90, created_at: '2024-01-01' },
 ];
 
 const mockAreas: Area[] = [
@@ -104,6 +111,7 @@ interface AppState {
   responsibleUnits: ResponsibleUnit[];
   inspectionPlans: InspectionPlan[];
   inspectionTasks: InspectionTask[];
+  inspectionTemplates: InspectionTemplate[];
   issues: Issue[];
   workOrders: WorkOrder[];
   
@@ -136,6 +144,10 @@ interface AppState {
   addInspectionTask: (task: Omit<InspectionTask, 'id' | 'created_at'>) => void;
   updateInspectionTask: (id: string, updates: Partial<InspectionTask>) => void;
   
+  addInspectionTemplate: (template: Omit<InspectionTemplate, 'id' | 'created_at'>) => void;
+  updateInspectionTemplate: (id: string, updates: Partial<InspectionTemplate>) => void;
+  deleteInspectionTemplate: (id: string) => void;
+  
   addIssue: (issue: Omit<Issue, 'id' | 'created_at'>) => void;
   updateIssue: (id: string, updates: Partial<Issue>) => void;
   confirmIssue: (id: string) => void;
@@ -146,7 +158,7 @@ interface AppState {
   completeWorkOrder: (id: string) => void;
   reviewWorkOrder: (id: string, approved: boolean) => void;
   
-  generateTasks: (planId: string, pointIds: string[]) => { success: boolean; message?: string; count?: number } | undefined;
+  generateTasks: (planId: string, pointIds: string[], templateId?: string) => { success: boolean; message?: string; count?: number } | undefined;
   randomSample: (areaId: string, count: number) => CameraPoint[];
   
   setSelectedArea: (area: Area | null) => void;
@@ -170,6 +182,7 @@ export const useStore = create<AppState>((set, get) => ({
   responsibleUnits: mockResponsibleUnits,
   inspectionPlans: mockInspectionPlans,
   inspectionTasks: mockInspectionTasks,
+  inspectionTemplates: mockInspectionTemplates,
   issues: mockIssues,
   workOrders: mockWorkOrders,
   
@@ -278,6 +291,25 @@ export const useStore = create<AppState>((set, get) => ({
     get().refreshDashboardStats();
   },
   
+  addInspectionTemplate: (template) => {
+    const newTemplate: InspectionTemplate = {
+      ...template,
+      id: `tpl${Date.now()}`,
+      created_at: new Date().toISOString().split('T')[0],
+    };
+    set(state => ({ inspectionTemplates: [...state.inspectionTemplates, newTemplate] }));
+  },
+  
+  updateInspectionTemplate: (id, updates) => {
+    set(state => ({
+      inspectionTemplates: state.inspectionTemplates.map(t => t.id === id ? { ...t, ...updates } : t),
+    }));
+  },
+  
+  deleteInspectionTemplate: (id) => {
+    set(state => ({ inspectionTemplates: state.inspectionTemplates.filter(t => t.id !== id) }));
+  },
+  
   addIssue: (issue) => {
     const newIssue: Issue = {
       ...issue,
@@ -329,7 +361,7 @@ export const useStore = create<AppState>((set, get) => ({
     get().updateWorkOrder(id, { status: approved ? 'approved' : 'rejected' });
   },
   
-  generateTasks: (planId, pointIds) => {
+  generateTasks: (planId, pointIds, templateId) => {
     const plan = get().inspectionPlans.find(p => p.id === planId);
     if (!plan) return;
     
@@ -345,6 +377,7 @@ export const useStore = create<AppState>((set, get) => ({
     
     const tasks: Omit<InspectionTask, 'id' | 'created_at'>[] = newPointIds.map(pointId => ({
       plan_id: planId,
+      template_id: templateId || null,
       camera_point_id: pointId,
       assignee_id: '3',
       status: 'pending',

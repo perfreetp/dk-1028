@@ -24,7 +24,10 @@ export function Reports() {
   const areaStats = areas
     .filter(a => !a.parent_id)
     .map(area => {
-      const points = cameraPoints.filter(p => p.area_id === area.id || cameraPoints.some(p => p.area_id === area.id));
+      const childAreaIds = areas.filter(sub => sub.parent_id === area.id).map(sub => sub.id);
+      const points = cameraPoints.filter(p => 
+        p.area_id === area.id || childAreaIds.includes(p.area_id)
+      );
       const avgScore = points.length > 0 ? Math.round(points.reduce((sum, p) => sum + p.score, 0) / points.length) : 0;
       return { name: area.name, avgScore, count: points.length };
     });

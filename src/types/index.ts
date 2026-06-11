@@ -6,6 +6,23 @@ export interface User {
   created_at: string;
 }
 
+export interface InspectionTemplate {
+  id: string;
+  name: string;
+  description: string;
+  clarity_weight: number;
+  night_effect_weight: number;
+  check_watermark: boolean;
+  check_playback: boolean;
+  check_clarity: boolean;
+  check_night_effect: boolean;
+  watermark_default_score: number;
+  playback_default_score: number;
+  clarity_default_score: number;
+  night_effect_default_score: number;
+  created_at: string;
+}
+
 export interface Area {
   id: string;
   name: string;
@@ -48,6 +65,7 @@ export interface InspectionPlan {
 export interface InspectionTask {
   id: string;
   plan_id: string;
+  template_id: string | null;
   camera_point_id: string;
   assignee_id: string;
   status: 'pending' | 'in_progress' | 'completed';

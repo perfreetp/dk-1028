@@ -24,16 +24,20 @@ export function SamplingTasks() {
     type: 'occlusion' | 'offset' | 'blur' | 'no_watermark' | 'no_playback' | 'night_vision' | 'other' | '';
     description: string;
     severity: 'low' | 'medium' | 'high' | 'critical';
+    images_urls: string[];
   }>({
     type: '',
     description: '',
     severity: 'medium',
+    images_urls: [],
   });
 
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [issueImages, setIssueImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const issueFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -49,6 +53,26 @@ export function SamplingTasks() {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleIssueImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setIssueImages(prev => [...prev, base64]);
+        setIssueForm(prev => ({ ...prev, images_urls: [...prev.images_urls, base64] }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveIssueImage = (index: number) => {
+    setIssueImages(prev => prev.filter((_, i) => i !== index));
+    setIssueForm(prev => ({ ...prev, images_urls: prev.images_urls.filter((_, i) => i !== index) }));
   };
 
   const handleExecute = (task: InspectionTask) => {
@@ -99,12 +123,13 @@ export function SamplingTasks() {
       description: issueForm.description,
       severity: issueForm.severity,
       status: 'pending',
-      images_urls: [],
+      images_urls: issueForm.images_urls,
       confirmed: false,
       merged_into_id: null,
     });
 
-    setIssueForm({ type: '', description: '', severity: 'medium' });
+    setIssueForm({ type: '', description: '', severity: 'medium', images_urls: [] });
+    setIssueImages([]);
     setShowIssueForm(false);
     setNotification({ id: '1', type: 'success', message: '问题记录成功', timestamp: new Date().toISOString() });
   };
@@ -556,11 +581,51 @@ export function SamplingTasks() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">问题图片</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-1" />
-                  <p className="text-sm text-gray-500">上传问题图片作为证据</p>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Camera className="w-4 h-4 inline mr-1" />
+                  问题图片
+                </label>
+                <input
+                  ref={issueFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleIssueImageSelect}
+                  className="hidden"
+                />
+                {issueImages.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      {issueImages.map((url, index) => (
+                        <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                          <img src={url} alt={`问题图片 ${index + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => handleRemoveIssueImage(index)}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => issueFileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-500 hover:text-primary-600 transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      添加更多图片
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => issueFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-500 hover:bg-gray-50 transition-all cursor-pointer"
+                  >
+                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                    <p className="text-sm text-gray-500">点击上传问题图片作为证据</p>
+                    <p className="text-xs text-gray-400 mt-1">支持 JPG, PNG 格式</p>
+                  </div>
+                )}
               </div>
             </div>
 
