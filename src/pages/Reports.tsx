@@ -200,10 +200,45 @@ export function Reports() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis domain={[0, 100]} />
-              <Tooltip formatter={(value) => [`${value}分`, '平均分']} />
+              <Tooltip 
+                formatter={(value, name, props) => {
+                  if (name === 'avgScore') {
+                    return [`${value}分`, '平均分'];
+                  }
+                  return [`${value}个`, '点位数'];
+                }}
+                labelFormatter={(label) => {
+                  const area = areaStats.find(a => a.name === label);
+                  return area ? `${label} (${area.count}个点位)` : label;
+                }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const area = areaStats.find(a => a.name === label);
+                    return (
+                      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+                        <p className="font-medium text-gray-800 mb-2">{label}</p>
+                        <p className="text-sm text-gray-600">点位数量: <span className="font-medium">{area?.count}个</span></p>
+                        <p className="text-sm text-gray-600">平均评分: <span className="font-medium text-primary-600">{area?.avgScore}分</span></p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Bar dataKey="avgScore" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
+          <div className="mt-4 space-y-2">
+            {areaStats.map(area => (
+              <div key={area.name} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <span className="text-gray-700">{area.name}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-500">{area.count}个点位</span>
+                  <span className={`font-medium ${getScoreColor(area.avgScore)}`}>{area.avgScore}分</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

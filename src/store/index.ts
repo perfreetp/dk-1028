@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type {
   User,
   Area,
@@ -22,7 +23,7 @@ const mockUsers: User[] = [
   { id: '4', email: 'reviewer@example.com', name: '复核员李四', role: 'reviewer', created_at: '2024-01-01' },
 ];
 
-const mockInspectionTemplates: InspectionTemplate[] = [
+const defaultInspectionTemplates: InspectionTemplate[] = [
   { id: 'tpl1', name: '标准巡检模板', description: '包含清晰度、夜视、水印、回放等全部检查项', clarity_weight: 50, night_effect_weight: 50, check_watermark: true, check_playback: true, check_clarity: true, check_night_effect: true, watermark_default_score: 100, playback_default_score: 100, clarity_default_score: 90, night_effect_default_score: 80, created_at: '2024-01-01' },
   { id: 'tpl2', name: '基础巡检模板', description: '仅检查清晰度和水印，适合日间监控点', clarity_weight: 70, night_effect_weight: 0, check_watermark: true, check_playback: false, check_clarity: true, check_night_effect: false, watermark_default_score: 100, playback_default_score: 0, clarity_default_score: 90, night_effect_default_score: 0, created_at: '2024-01-01' },
   { id: 'tpl3', name: '夜视专项模板', description: '重点检查夜视效果，适用于夜间重点区域', clarity_weight: 30, night_effect_weight: 70, check_watermark: true, check_playback: true, check_clarity: true, check_night_effect: true, watermark_default_score: 100, playback_default_score: 100, clarity_default_score: 80, night_effect_default_score: 90, created_at: '2024-01-01' },
@@ -171,20 +172,22 @@ interface AppState {
   refreshDashboardStats: () => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  currentUser: mockUsers[0],
-  isLoading: false,
-  notification: null,
-  
-  users: mockUsers,
-  areas: mockAreas,
-  cameraPoints: mockCameraPoints,
-  responsibleUnits: mockResponsibleUnits,
-  inspectionPlans: mockInspectionPlans,
-  inspectionTasks: mockInspectionTasks,
-  inspectionTemplates: mockInspectionTemplates,
-  issues: mockIssues,
-  workOrders: mockWorkOrders,
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      currentUser: mockUsers[0],
+      isLoading: false,
+      notification: null,
+      
+      users: mockUsers,
+      areas: mockAreas,
+      cameraPoints: mockCameraPoints,
+      responsibleUnits: mockResponsibleUnits,
+      inspectionPlans: mockInspectionPlans,
+      inspectionTasks: mockInspectionTasks,
+      inspectionTemplates: defaultInspectionTemplates,
+      issues: mockIssues,
+      workOrders: mockWorkOrders,
   
   dashboardStats: {
     total_points: mockCameraPoints.length,
@@ -430,4 +433,16 @@ export const useStore = create<AppState>((set, get) => ({
       },
     });
   },
-}));
+}),
+{
+  name: 'video-inspection-storage',
+  partialize: (state) => ({
+    inspectionTemplates: state.inspectionTemplates,
+    inspectionTasks: state.inspectionTasks,
+    issues: state.issues,
+    workOrders: state.workOrders,
+    cameraPoints: state.cameraPoints,
+  }),
+}
+)
+);

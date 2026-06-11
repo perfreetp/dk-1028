@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { Play, CheckCircle, Clock, Camera, Star, Moon, Hash, X, Shuffle, Upload, Flag, AlertCircle } from 'lucide-react';
+import { Play, CheckCircle, Clock, Camera, Star, Moon, Hash, X, Shuffle, Upload, Flag, AlertCircle, FileText } from 'lucide-react';
 import { useStore } from '@/store';
-import type { InspectionTask } from '@/types';
+import type { InspectionTask, InspectionTemplate } from '@/types';
 
 export function SamplingTasks() {
-  const { inspectionTasks, cameraPoints, areas, addInspectionTask, updateInspectionTask, addIssue, randomSample, setNotification } = useStore();
+  const { inspectionTasks, cameraPoints, areas, inspectionTemplates, issues, addInspectionTask, updateInspectionTask, addIssue, randomSample, setNotification } = useStore();
   const [selectedTask, setSelectedTask] = useState<InspectionTask | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<InspectionTemplate | null>(null);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [showRandomSampleModal, setShowRandomSampleModal] = useState(false);
   const [selectedArea, setSelectedArea] = useState('');
@@ -79,11 +80,15 @@ export function SamplingTasks() {
     setSelectedTask(task);
     setUploadedImages(task.screenshot_url ? [task.screenshot_url] : []);
     setScreenshotPreview(task.screenshot_url || null);
+    
+    const template = task.template_id ? inspectionTemplates.find(t => t.id === task.template_id) : null;
+    setSelectedTemplate(template || null);
+    
     setTaskForm({
-      clarity_score: task.clarity_score || 0,
-      night_effect_score: task.night_effect_score || 0,
-      watermark_check: task.watermark_check,
-      playback_check: task.playback_check,
+      clarity_score: task.clarity_score ?? (template?.check_clarity ? template.clarity_default_score : 0),
+      night_effect_score: task.night_effect_score ?? (template?.check_night_effect ? template.night_effect_default_score : 0),
+      watermark_check: task.watermark_check ?? (template?.check_watermark ? false : false),
+      playback_check: task.playback_check ?? (template?.check_playback ? false : false),
       screenshot_url: task.screenshot_url || '',
     });
     setShowExecuteModal(true);
@@ -92,7 +97,17 @@ export function SamplingTasks() {
   const handleCompleteTask = () => {
     if (!selectedTask) return;
     
-    const avgScore = Math.round((taskForm.clarity_score + taskForm.night_effect_score) / 2);
+    let avgScore = 0;
+    if (selectedTemplate) {
+      const clarityWeight = selectedTemplate.check_clarity ? selectedTemplate.clarity_weight : 0;
+      const nightWeight = selectedTemplate.check_night_effect ? selectedTemplate.night_effect_weight : 0;
+      const totalWeight = clarityWeight + nightWeight;
+      if (totalWeight > 0) {
+        avgScore = Math.round((taskForm.clarity_score * clarityWeight + taskForm.night_effect_score * nightWeight) / totalWeight);
+      }
+    } else {
+      avgScore = Math.round((taskForm.clarity_score + taskForm.night_effect_score) / 2);
+    }
     
     updateInspectionTask(selectedTask.id, {
       ...taskForm,
@@ -357,70 +372,94 @@ export function SamplingTasks() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <Star className="w-4 h-4" />
-                    清晰度评分
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={taskForm.clarity_score}
-                      onChange={e => setTaskForm({ ...taskForm, clarity_score: parseInt(e.target.value) })}
-                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <span className="text-xl font-bold text-primary-600 w-12 text-right">{taskForm.clarity_score}</span>
+              {selectedTemplate && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-800">当前模板: {selectedTemplate.name}</span>
+                  </div>
+                  <p className="text-sm text-blue-600">{selectedTemplate.description}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {selectedTemplate.check_clarity && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">清晰度</span>}
+                    {selectedTemplate.check_night_effect && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">夜视</span>}
+                    {selectedTemplate.check_watermark && <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">水印</span>}
+                    {selectedTemplate.check_playback && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">回放</span>}
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <Moon className="w-4 h-4" />
-                    夜视效果评分
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={taskForm.night_effect_score}
-                      onChange={e => setTaskForm({ ...taskForm, night_effect_score: parseInt(e.target.value) })}
-                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <span className="text-xl font-bold text-primary-600 w-12 text-right">{taskForm.night_effect_score}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(!selectedTemplate || selectedTemplate.check_clarity) && (
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <Star className="w-4 h-4" />
+                      清晰度评分
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={taskForm.clarity_score}
+                        onChange={e => setTaskForm({ ...taskForm, clarity_score: parseInt(e.target.value) })}
+                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-xl font-bold text-primary-600 w-12 text-right">{taskForm.clarity_score}</span>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {(!selectedTemplate || selectedTemplate.check_night_effect) && (
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <Moon className="w-4 h-4" />
+                      夜视效果评分
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={taskForm.night_effect_score}
+                        onChange={e => setTaskForm({ ...taskForm, night_effect_score: parseInt(e.target.value) })}
+                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-xl font-bold text-primary-600 w-12 text-right">{taskForm.night_effect_score}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={taskForm.watermark_check}
-                    onChange={e => setTaskForm({ ...taskForm, watermark_check: e.target.checked })}
-                    className="w-5 h-5 text-primary-600 rounded"
-                  />
-                  <div>
-                    <p className="font-medium text-gray-800">时间水印检查</p>
-                    <p className="text-sm text-gray-500">确认视频画面包含时间水印</p>
-                  </div>
-                </label>
+                {(!selectedTemplate || selectedTemplate.check_watermark) && (
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={taskForm.watermark_check}
+                      onChange={e => setTaskForm({ ...taskForm, watermark_check: e.target.checked })}
+                      className="w-5 h-5 text-primary-600 rounded"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-800">时间水印检查</p>
+                      <p className="text-sm text-gray-500">确认视频画面包含时间水印</p>
+                    </div>
+                  </label>
+                )}
 
-                <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={taskForm.playback_check}
-                    onChange={e => setTaskForm({ ...taskForm, playback_check: e.target.checked })}
-                    className="w-5 h-5 text-primary-600 rounded"
-                  />
-                  <div>
-                    <p className="font-medium text-gray-800">录像回放抽查</p>
-                    <p className="text-sm text-gray-500">确认录像可以正常回放</p>
-                  </div>
-                </label>
+                {(!selectedTemplate || selectedTemplate.check_playback) && (
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={taskForm.playback_check}
+                      onChange={e => setTaskForm({ ...taskForm, playback_check: e.target.checked })}
+                      className="w-5 h-5 text-primary-600 rounded"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-800">录像回放抽查</p>
+                      <p className="text-sm text-gray-500">确认录像可以正常回放</p>
+                    </div>
+                  </label>
+                )}
               </div>
 
               <div>
@@ -489,14 +528,43 @@ export function SamplingTasks() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {inspectionTasks.find(t => t.id === selectedTask.id) && (
-                    <div className="p-3 bg-red-50 rounded-lg">
-                      <p className="text-sm text-red-700">已记录问题</p>
-                    </div>
-                  )}
-                  {!inspectionTasks.find(t => t.id === selectedTask.id) && (
-                    <p className="text-center text-gray-400 py-4">暂无问题记录</p>
-                  )}
+                  {(() => {
+                    const taskIssues = issues.filter(i => i.task_id === selectedTask?.id);
+                    if (taskIssues.length > 0) {
+                      return taskIssues.map(issue => (
+                        <div key={issue.id} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-red-800">
+                              {issue.type === 'occlusion' ? '遮挡' :
+                               issue.type === 'offset' ? '偏移' :
+                               issue.type === 'blur' ? '模糊' :
+                               issue.type === 'no_watermark' ? '水印缺失' :
+                               issue.type === 'no_playback' ? '回放异常' :
+                               issue.type === 'night_vision' ? '夜视问题' : '其他'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${
+                              issue.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                              issue.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                              issue.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {issue.severity === 'critical' ? '严重' :
+                               issue.severity === 'high' ? '高' :
+                               issue.severity === 'medium' ? '中' : '低'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mb-2">{issue.description}</p>
+                          {issue.images_urls && issue.images_urls.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Camera className="w-3 h-3" />
+                              <span>{issue.images_urls.length} 张图片</span>
+                            </div>
+                          )}
+                        </div>
+                      ));
+                    }
+                    return <p className="text-center text-gray-400 py-4">暂无问题记录</p>;
+                  })()}
                 </div>
               </div>
             </div>
