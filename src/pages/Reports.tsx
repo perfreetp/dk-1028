@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Download, Trophy, TrendingUp, Calendar, Award, Medal, BarChart3, FileText } from 'lucide-react';
 import { useStore } from '@/store';
-import { BarChart, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Bar, Line, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Bar, Line, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 

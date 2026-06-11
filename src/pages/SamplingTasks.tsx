@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
-import { Play, CheckCircle, Clock, Camera, Eye, Star, Moon, Hash, X, Shuffle, Upload, Flag, AlertCircle } from 'lucide-react';
+import { Play, CheckCircle, Clock, Camera, Star, Moon, Hash, X, Shuffle, Upload, Flag, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store';
 import type { InspectionTask } from '@/types';
 
 export function SamplingTasks() {
-  const { inspectionTasks, cameraPoints, areas, users, addInspectionTask, updateInspectionTask, addIssue, randomSample, setNotification } = useStore();
+  const { inspectionTasks, cameraPoints, areas, addInspectionTask, updateInspectionTask, addIssue, randomSample, setNotification } = useStore();
   const [selectedTask, setSelectedTask] = useState<InspectionTask | null>(null);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [showRandomSampleModal, setShowRandomSampleModal] = useState(false);
@@ -20,10 +20,14 @@ export function SamplingTasks() {
     screenshot_url: '',
   });
 
-  const [issueForm, setIssueForm] = useState({
-    type: '' as 'occlusion' | 'offset' | 'blur' | 'no_watermark' | 'no_playback' | 'night_vision' | 'other',
+  const [issueForm, setIssueForm] = useState<{
+    type: 'occlusion' | 'offset' | 'blur' | 'no_watermark' | 'no_playback' | 'night_vision' | 'other' | '';
+    description: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+  }>({
+    type: '',
     description: '',
-    severity: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    severity: 'medium',
   });
 
   const [showIssueForm, setShowIssueForm] = useState(false);
@@ -160,10 +164,6 @@ export function SamplingTasks() {
     const point = cameraPoints.find(p => p.id === pointId);
     if (!point) return '';
     return areas.find(a => a.id === point.area_id)?.name || '';
-  };
-
-  const getUserName = (userId: string) => {
-    return users.find(u => u.id === userId)?.name || userId;
   };
 
   const issueTypes = [

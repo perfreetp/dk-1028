@@ -27,10 +27,16 @@ export function Dashboard() {
 
   const areaPointCount = areas
     .filter(a => !a.parent_id)
-    .map(area => ({
-      name: area.name,
-      value: cameraPoints.filter(p => p.area_id === area.id || cameraPoints.some(p => p.area_id === area.id)).length,
-    }));
+    .map(area => {
+      const childAreaIds = areas.filter(sub => sub.parent_id === area.id).map(sub => sub.id);
+      const count = cameraPoints.filter(p => 
+        p.area_id === area.id || childAreaIds.includes(p.area_id)
+      ).length;
+      return {
+        name: area.name,
+        value: count,
+      };
+    });
 
   return (
     <div className="space-y-6">

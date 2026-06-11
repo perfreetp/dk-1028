@@ -69,7 +69,11 @@ export function CameraPoints() {
       updateCameraPoint(selectedPoint.id, formData);
       setNotification({ id: '1', type: 'success', message: '点位更新成功', timestamp: new Date().toISOString() });
     } else {
-      addCameraPoint(formData);
+      addCameraPoint({
+        ...formData,
+        last_inspected_at: null,
+        score: 0,
+      });
       setNotification({ id: '1', type: 'success', message: '点位创建成功', timestamp: new Date().toISOString() });
     }
     setShowForm(false);

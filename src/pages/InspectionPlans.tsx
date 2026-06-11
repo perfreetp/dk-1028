@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Play, Eye, X, Calendar, MapPin, Users, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Play, Eye, X, Calendar, MapPin, Users } from 'lucide-react';
 import { useStore } from '@/store';
 import type { InspectionPlan, Area } from '@/types';
 
@@ -91,10 +91,12 @@ export function InspectionPlans() {
     if (!selectedPlan || selectedPoints.length === 0) return;
     const result = generateTasks(selectedPlan.id, selectedPoints);
     setShowGenerateModal(false);
-    if (result && result.success) {
-      setNotification({ id: '1', type: 'success', message: `成功生成 ${result.count} 个任务`, timestamp: new Date().toISOString() });
-    } else if (result && !result.success) {
-      setNotification({ id: '1', type: 'warning', message: result.message, timestamp: new Date().toISOString() });
+    if (result) {
+      if (result.success) {
+        setNotification({ id: '1', type: 'success', message: `成功生成 ${result.count} 个任务`, timestamp: new Date().toISOString() });
+      } else {
+        setNotification({ id: '1', type: 'warning', message: result.message || '任务生成失败', timestamp: new Date().toISOString() });
+      }
     }
   };
 

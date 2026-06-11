@@ -161,8 +161,8 @@ export function WorkOrders() {
   const completedOrders = workOrders.filter(w => w.status === 'completed');
   const reviewedOrders = workOrders.filter(w => ['approved', 'rejected'].includes(w.status));
 
-  const isOverdue = (deadline: string) => {
-    return new Date(deadline) < new Date() && !workOrders.find(w => w.deadline === deadline && w.status === 'approved');
+  const isOverdue = (deadline: string, status: string) => {
+    return new Date(deadline) < new Date() && status !== 'approved';
   };
 
   return (
@@ -245,7 +245,7 @@ export function WorkOrders() {
               {workOrders.map(order => {
                 const issue = getIssue(order.issue_id);
                 return (
-                  <tr key={order.id} className={`hover:bg-gray-50 transition-colors ${isOverdue(order.deadline) ? 'bg-red-50' : ''}`}>
+                  <tr key={order.id} className={`hover:bg-gray-50 transition-colors ${isOverdue(order.deadline, order.status) ? 'bg-red-50' : ''}`}>
                     <td className="px-6 py-4">
                       <span className="font-medium text-gray-800">#{order.id.slice(-8)}</span>
                     </td>
@@ -266,10 +266,10 @@ export function WorkOrders() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        <span className={isOverdue(order.deadline) ? 'text-red-600 font-medium' : 'text-gray-600'}>
+                        <span className={isOverdue(order.deadline, order.status) ? 'text-red-600 font-medium' : 'text-gray-600'}>
                           {order.deadline}
                         </span>
-                        {isOverdue(order.deadline) && (
+                        {isOverdue(order.deadline, order.status) && (
                           <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">超期</span>
                         )}
                       </div>
@@ -440,7 +440,7 @@ export function WorkOrders() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">截止日期</label>
-                  <span className={isOverdue(selectedOrder.deadline) ? 'text-red-600' : 'text-gray-800'}>
+                  <span className={isOverdue(selectedOrder.deadline, selectedOrder.status) ? 'text-red-600' : 'text-gray-800'}>
                     {selectedOrder.deadline}
                   </span>
                 </div>
